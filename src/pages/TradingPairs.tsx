@@ -1,8 +1,34 @@
+import { useState } from 'react';
+import { riskApi } from '../api/client';
+
+interface Pair {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  halted: boolean;
+}
+
 export default function TradingPairs() {
-  const pairs = [
-    { symbol: 'BTC-USDT', status: 'Active', baseAsset: 'BTC', quoteAsset: 'USDT' },
-    { symbol: 'ETH-USDT', status: 'Active', baseAsset: 'ETH', quoteAsset: 'USDT' },
-  ];
+  const [pairs, setPairs] = useState<Pair[]>([
+    { symbol: 'BTC-USDT', baseAsset: 'BTC', quoteAsset: 'USDT', halted: false },
+    { symbol: 'ETH-USDT', baseAsset: 'ETH', quoteAsset: 'USDT', halted: false },
+  ]);
+
+  const checkStatus = async (symbol: string) => {
+    try {
+      const res = await riskApi.get(`/api/v1/risk/status?symbol=${symbol}`);
+      setPairs((prev) =>
+        prev.map((p) => p.symbol === symbol ? { ...p, halted: res.data.halted } : p)
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  // Check status on mount
+  useState(() => {
+    pairs.forEach((p) => checkStatus(p.symbol));
+  });
 
   return (
     <div style={{ padding: 24 }}>
@@ -14,7 +40,6 @@ export default function TradingPairs() {
             <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #333' }}>Base</th>
             <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #333' }}>Quote</th>
             <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #333' }}>Status</th>
-            <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #333' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -23,11 +48,8 @@ export default function TradingPairs() {
               <td style={{ padding: 8 }}>{p.symbol}</td>
               <td style={{ padding: 8 }}>{p.baseAsset}</td>
               <td style={{ padding: 8 }}>{p.quoteAsset}</td>
-              <td style={{ padding: 8, color: '#0ecb81' }}>{p.status}</td>
-              <td style={{ padding: 8 }}>
-                <button style={{ background: '#f6465d', border: 'none', color: 'white', padding: '4px 12px', borderRadius: 4, cursor: 'pointer' }}>
-                  Halt
-                </button>
+              <td style={{ padding: 8, color: p.halted ? '#f6465d' : '#0ecb81' }}>
+                {p.halted ? 'HALTED' : 'Active'}
               </td>
             </tr>
           ))}

@@ -1,29 +1,35 @@
 import { useEffect, useState } from 'react';
+import { gatewayApi, accountApi, riskApi } from '../api/client';
 
-interface Stats {
-  services: { name: string; status: string }[];
+interface ServiceStatus {
+  name: string;
+  status: string;
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats>({ services: [] });
+  const [services, setServices] = useState<ServiceStatus[]>([]);
 
   useEffect(() => {
-    const services = [
-      { name: 'Gateway', url: 'http://localhost:8080/health' },
-      { name: 'Account', url: 'http://localhost:50053/api/v1/account' },
-      { name: 'Market Data', url: 'http://localhost:8081/api/v1/klines?symbol=BTC-USDT&limit=1' },
+    const checks = [
+      { name: 'Gateway', fn: () => gatewayApi.get('/health') },
+      { name: 'Account', fn: () => accountApi.get('/api/v1/account/register') },
+      { name: 'Risk', fn: () => riskApi.get('/api/v1/risk/status') },
     ];
 
     Promise.all(
-      services.map(async (s) => {
+      checks.map(async (s) => {
         try {
-          await fetch(s.url, { signal: AbortSignal.timeout(3000) });
+          await s.fn();
           return { name: s.name, status: 'UP' };
-        } catch {
+        } catch (err: unknown) {
+          // A non-network error (like 400/405) still means service is up
+          if (err && typeof err === 'object' && 'response' in err) {
+            return { name: s.name, status: 'UP' };
+          }
           return { name: s.name, status: 'DOWN' };
         }
       })
-    ).then((results) => setStats({ services: results }));
+    ).then(setServices);
   }, []);
 
   return (
@@ -38,7 +44,7 @@ export default function Dashboard() {
           </tr>
         </thead>
         <tbody>
-          {stats.services.map((s) => (
+          {services.map((s) => (
             <tr key={s.name}>
               <td style={{ padding: 8 }}>{s.name}</td>
               <td style={{ padding: 8, color: s.status === 'UP' ? '#0ecb81' : '#f6465d' }}>{s.status}</td>

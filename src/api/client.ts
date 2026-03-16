@@ -1,14 +1,11 @@
 import axios from 'axios';
 
-const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8080/api/v1',
-  timeout: 10000,
-});
+const ACCOUNT_URL = import.meta.env.VITE_ACCOUNT_URL || 'http://localhost:50053';
+const WALLET_URL = import.meta.env.VITE_WALLET_URL || 'http://localhost:50054';
+const RISK_URL = import.meta.env.VITE_RISK_URL || 'http://localhost:50055';
+const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:8080';
 
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-export default client;
+export const accountApi = axios.create({ baseURL: ACCOUNT_URL, timeout: 10000 });
+export const walletApi = axios.create({ baseURL: WALLET_URL, timeout: 10000 });
+export const riskApi = axios.create({ baseURL: RISK_URL, timeout: 10000 });
+export const gatewayApi = axios.create({ baseURL: GATEWAY_URL, timeout: 10000 });
